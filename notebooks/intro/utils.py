@@ -1,10 +1,15 @@
-import torch; torch.set_grad_enabled(False)
+import torch
+
+torch.set_grad_enabled(False)
 from datasets import load_dataset
 from tqdm.auto import tqdm
 
 # from notebook 00
 
-ALLOWED_CHARS = set(" \n\"\'(),.:?!0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz")
+ALLOWED_CHARS = set(
+    " \n\"'(),.:?!0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+)
+
 
 def load_orig_ds_txt(split: str) -> list[str]:
     # checking just startswith, because you can include slice like "train[:1000]"
@@ -18,17 +23,22 @@ def load_orig_ds_txt(split: str) -> list[str]:
         dataset.append(sample_txt)
     return dataset
 
+
 # from notebook 01
+
 
 def tokenize(tokenizer, sample_txt: str) -> list[int]:
     # supposedly this can be different than prepending the bos token id
     return tokenizer.encode(tokenizer.bos_token + sample_txt, return_tensors="pt")[0]
 
+
 # from notebook 02
+
 
 def get_logits(model, sample_tok):
     sample_tok = sample_tok.unsqueeze(0)
     return model(sample_tok).logits[0]
+
 
 def get_correct_probs(model, sample_tok):
     # logits: pos, d_vocab
@@ -40,6 +50,7 @@ def get_correct_probs(model, sample_tok):
     probs = probs[:-1]
     # out of d_vocab values, take the one that corresponds to the correct next token
     return probs[range(len(probs)), sample_tok[1:]]
+
 
 # from notebook 03
 
@@ -90,6 +101,7 @@ token_divs.forEach(function(token_div) {
 </script>
 """
 
+
 def token_to_html(tokenizer, token, bg_color=None, hover_data=None):
     hover_data = hover_data or {}  # equivalent to `if not data: data = {}`
     # 1. non-breakable space, w/o it leading spaces wouldn't be displayed
@@ -116,8 +128,11 @@ def token_to_html(tokenizer, token, bg_color=None, hover_data=None):
         style_str = f" style='{inside_style_str}'"
     # converting data dict into data attributes
     if hover_data:
-        data_str = "".join(f" data-{k}='{v.replace(' ', '&nbsp;')}'" for k, v in hover_data.items())
+        data_str = "".join(
+            f" data-{k}='{v.replace(' ', '&nbsp;')}'" for k, v in hover_data.items()
+        )
     return f"<div class='token'{style_str}{data_str}>{str_token}</div>{br}"
+
 
 def vis_tokens(tokenizer, tokens, colors=None, hover_datas=None):
     token_htmls = []
@@ -126,7 +141,10 @@ def vis_tokens(tokenizer, tokens, colors=None, hover_datas=None):
         color = colors[i] if colors else None
         hover_data = hover_datas[i] if hover_datas else None
         token_htmls.append(token_to_html(tokenizer, token, color, hover_data))
-    return STYLE_TAG + HOVER_JS_TAG + "".join(token_htmls) + "<div id='hover_info'></div>"
+    return (
+        STYLE_TAG + HOVER_JS_TAG + "".join(token_htmls) + "<div id='hover_info'></div>"
+    )
+
 
 def probs_to_colors(probs):
     # for the endoftext token
