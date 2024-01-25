@@ -2,6 +2,8 @@ import torch; torch.set_grad_enabled(False)
 from datasets import load_dataset
 from tqdm.auto import tqdm
 
+from IPython.display import HTML
+
 # from notebook 00
 
 ALLOWED_CHARS = set(" \n\"\'(),.:?!0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz")
@@ -129,9 +131,7 @@ def vis_tokens(tokenizer, tokens, colors=None, hover_datas=None):
     return STYLE_TAG + HOVER_JS_TAG + "".join(token_htmls) + "<div id='hover_info'></div>"
 
 def probs_to_colors(probs):
-    # for the endoftext token
-    # no prediction, no color
-    colors = ["white"]
+    colors = []
     for p in probs.tolist():
         red_gap = 150  # the higher it is, the less red the tokens will be
         green_blue_val = red_gap + int((255 - red_gap) * (1 - p))
@@ -183,3 +183,30 @@ def compare_models(model_a, model_b, sample_tok, tokenizer, top_k=3) -> list:
     top_k_a_probs = torch.gather(probs_a, 1, top_k_b.indices)
 
     return list(map(_pad_start, [next_probs_a, next_probs_b, top_k_b.indices, top_k_a_probs, top_k_b.values]))
+
+def to_tok_prob_str(tokenizer, tok, prob_a, prob_b):
+    tok_str = tokenizer.decode(tok).replace(" ", "&nbsp;").replace("\n", r"\n")
+    prob_a_str = f"{prob_a:.2%}"
+    prob_b_str = f"{prob_b:.2%}"
+    return f"{prob_a_str:>6} → {prob_b_str:>6} |{tok_str}|"
+def visualize_models(model_a, model_b, sample_tok, tokenizer, top_k=3):
+    """
+    Returns: HTML representation for display
+    """
+    next_probs_a, next_probs_b, top_k_b_words, top_k_a_probs, top_k_b_probs = compare_models(model_a, model_b, sample_tok, tokenizer)
+    next_probs_above = torch.maximum(next_probs_b - next_probs_a, torch.zeros_like(next_probs_a))
+    colors = probs_to_colors(next_probs_above)
+
+    hover_datas = [None,]
+    for i in range(1, len(sample_tok)):
+        hover_data = {}
+        tok = sample_tok[i]
+        hover_data["next"] = to_tok_prob_str(tokenizer, tok, next_probs_a[i], next_probs_b[i])
+
+        for k in range(top_k_b_words.shape[-1]):
+            hover_data[f"top_{k}"] = to_tok_prob_str(tokenizer, top_k_b_words[i,k], top_k_a_probs[i,k], top_k_b_probs[i,k])
+
+        hover_datas.append(hover_data)
+
+    vis_tokens(tokenizer, sample_tok, colors, hover_datas)
+    return HTML(vis_tokens(tokenizer, sample_tok, colors, hover_datas))
