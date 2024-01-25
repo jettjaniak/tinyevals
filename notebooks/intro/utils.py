@@ -30,7 +30,7 @@ def get_logits(model, sample_tok):
     sample_tok = sample_tok.unsqueeze(0)
     return model(sample_tok).logits[0]
 
-def get_correct_probs(model, sample_tok):
+def get_next_probs(model, sample_tok):
     # logits: pos, d_vocab
     logits = get_logits(model, sample_tok)
     # pos, d_vocab
@@ -62,13 +62,12 @@ HOVER_JS_TAG = """
 var token_divs = document.querySelectorAll('.token');
 var hover_info = document.getElementById('hover_info');
 
-token_divs.forEach(function(token_div) {
-    token_div.addEventListener('mouseover', function(e) {
-    
+document.addEventListener('mouseover', function(e) {
+    if (e.target.classList.contains('token')) {
         hover_info.innerHTML = ""
-        for( var d in this.dataset) {
+        for( var d in e.target.dataset) {
             hover_info.innerHTML += "<b>" + d + "</b> ";
-            hover_info.innerHTML += this.dataset[d] + "<br>";
+            hover_info.innerHTML += e.target.dataset[d] + "<br>";
         }
 
         var curr_height = hover_info.clientHeight;
@@ -80,12 +79,13 @@ token_divs.forEach(function(token_div) {
         if (curr_height > style_height) {
             hover_info.style.minHeight = curr_height + "px";
         }
+    }
+});
 
-    });
-
-    token_div.addEventListener('mouseout', function(e) {
+document.addEventListener('mouseout', function(e) {
+    if (e.target.classList.contains('token')) {
         hover_info.innerHTML = ""
-    });
+    }
 });
 </script>
 """
@@ -126,7 +126,8 @@ def vis_tokens(tokenizer, tokens, colors=None, hover_datas=None):
         color = colors[i] if colors else None
         hover_data = hover_datas[i] if hover_datas else None
         token_htmls.append(token_to_html(tokenizer, token, color, hover_data))
-    return STYLE_TAG + HOVER_JS_TAG + "".join(token_htmls) + "<div id='hover_info'></div>"
+    # return STYLE_TAG + HOVER_JS_TAG + "".join(token_htmls) + "<div id='hover_info'></div>"
+    return STYLE_TAG + "".join(token_htmls) + "<div id='hover_info'></div>"
 
 def probs_to_colors(probs):
     # for the endoftext token
@@ -137,3 +138,51 @@ def probs_to_colors(probs):
         green_blue_val = red_gap + int((255 - red_gap) * (1 - p))
         colors.append(f"rgb(255, {green_blue_val}, {green_blue_val})")
     return colors
+
+
+def _pad_start(t):
+    value_to_prepend = -1
+    if len(t.shape) == 1:
+        return torch.cat((torch.tensor([value_to_prepend]), t))
+    else:
+    # input: 2D tensor of shape [seq_len - 1, top_k]
+        pre = torch.full((1, t.size()[-1]), value_to_prepend)
+        return torch.cat((pre, t), dim=0)
+
+
+def get_probs(model, sample_tok):
+    logits = get_logits(model, sample_tok)
+    probs = torch.softmax(logits, dim=-1)[:-1]
+    next_probs = probs[range(len(probs)), sample_tok[1:]]
+    return next_probs, probs
+
+def compare_models(model_a, model_b, sample_tok, top_k=3) -> list:
+    """
+    Compare the probabilities of the next token for two models and get the top k token predictions according to model B.
+
+    Args:
+    - model_a: The first model
+    - model_b: The second model
+    - tokens: The tokenized prompt
+    # - tokenizer: The tokenizer  TODO: do we still need this tokenizer if the prompt is tokenized already?
+    - top_k: The number of top token predictions to retrieve (default is 5)
+
+    Returns:
+    - A list where each element contains:
+        - The probabilities of the next token for both models
+        - The top k token predictions according to model B
+        - The probabilities of these tokens according to both models
+    """
+
+    device = next(model_a.parameters()).device
+    model_b = model_b.to(device)
+    sample_tok = sample_tok.to(device)
+
+    next_probs_a, probs_a = get_probs(model_a, sample_tok)
+    next_probs_b, probs_b = get_probs(model_b, sample_tok)
+
+    top_k_b = torch.topk(probs_b, top_k, dim=-1)
+    print(top_k_b.indices.shape,probs_b.shape)
+    top_k_a_probs = torch.gather(probs_a, 1, top_k_b.indices)
+
+    return list(map(_pad_start, [next_probs_a, next_probs_b, top_k_b.indices, top_k_a_probs, top_k_b.values]))
