@@ -31,7 +31,7 @@ CATEGORIES = {
 }
 
 
-def label_tokens(sentences: List, verbose: bool = False) -> List[List]:
+def label_tokens(sentences: List, tokenized: bool=True, verbose: bool = False) -> List[List]:
     """
     Labels tokens in a sentence. Takes the context of the token into account.
 
@@ -39,6 +39,9 @@ def label_tokens(sentences: List, verbose: bool = False) -> List[List]:
     ----------
     sentences : List
         A batch/list of sentences, each being a list of tokens.
+    tokenized : bool, optional
+        Whether the sentences are already tokenized, by default True. If the sentences 
+        are full strings and not lists of tokens, then set to False.
     verbose : bool, optional
         Whether to print the tokens and their labels to the console, by default False.  
 
@@ -56,13 +59,16 @@ def label_tokens(sentences: List, verbose: bool = False) -> List[List]:
     labelled_sentences = list()
 
     for sentence in sentences:
-        # Create a Doc from the list of tokens
-        doc = Doc(nlp.vocab, words=sentence)
-
-        # Apply the spaCy pipeline, except for the tokenizer
-        for name, proc in nlp.pipeline:
-            if name != "tokenizer":
-                doc = proc(doc)
+        if tokenized:
+            # sentence is a list of tokens
+            doc = Doc(nlp.vocab, words=sentence)
+            # Apply the spaCy pipeline, except for the tokenizer
+            for name, proc in nlp.pipeline:
+                if name != "tokenizer":
+                    doc = proc(doc)
+        else:
+            # sentence is a single string
+            doc = nlp(sentence)
 
         labelled_tokens = list()  # List holding labels for all tokens of sentence
 
@@ -95,8 +101,14 @@ def label_tokens(sentences: List, verbose: bool = False) -> List[List]:
 
 
 if __name__ == "__main__":
+    # result = label_tokens(
+    #     ["Hi, my name is Joshua.".split(" "), "The highway is full of car s, Peter.".split(" ")],
+    #     tokenized=True,
+    #     verbose=True,
+    # )
     result = label_tokens(
-        ["Hi, my name is Joshua.".split(" "), "This is a great Bank of China, Peter.".split(" ")],
+        ["Hi, my name is Joshua.", "The highway is full of car s, Peter."],
+        tokenized=False,
         verbose=True,
     )
     print(result)
