@@ -6,15 +6,14 @@ Additionally, it can visualize the sentences and their poart-of-speech (POS) tag
 
 from typing import List
 
-import spacy
-from spacy.tokens import Doc
-from spacy import displacy
+import spacy  # pylint: disable=import-error
+from spacy.tokens import Doc  # pylint: disable=import-error
 
 
 # make sure the english language model capabilities are installed by the equivalent of:
 # python -m spacy download en_core_web_sm
 # Should be run once, initially. Download only starts if not already installed.
-spacy.cli.download("en_core_web_sm", False, False, '-q')
+spacy.cli.download("en_core_web_sm", False, False, "-q")
 
 
 CATEGORIES = {
@@ -25,7 +24,9 @@ CATEGORIES = {
     "Is Verb": (lambda token: "VB" in token.tag_),  # redundant
     "Is Adjective": (lambda token: token.pos_ == "ADJ"),  # redundant
     "Is Adverb": (lambda token: token.pos_ == "ADV"),  # redundant
-    "Named Entity Type": (lambda token: token.ent_type_ if token.ent_type_ != '' else token.ent_type_),  # False, 'PERSON', 'ORG', 'GPE', ..
+    "Named Entity Type": (
+        lambda token: token.ent_type_ if token.ent_type_ != "" else token.ent_type_
+    ),  # False, 'PERSON', 'ORG', 'GPE', ..
 }
 
 
@@ -50,7 +51,7 @@ def label_tokens(sentences: List, verbose: bool = False) -> List[List]:
     assert isinstance(sentences, list)
     # Load english language model
     nlp = spacy.load("en_core_web_sm")
-    # labelled tokens, List holding sentences which hold tokens which hold corresponding token labels
+    # labelled tokens, List holding sentences holding tokens holding corresponding token labels
     labelled_sentences = list()
 
     for sentence in sentences:
@@ -66,23 +67,26 @@ def label_tokens(sentences: List, verbose: bool = False) -> List[List]:
 
         for token in doc:
             labels = list()  #  The list holding labels of a single token
-            for cname, category_check in CATEGORIES.items():
+            for _, category_check in CATEGORIES.items():
                 label = category_check(token)
                 labels.append(label)
             # add current token's to the list
             labelled_tokens.append(labels)
-            
+
             # print the token and its labels to console
             if verbose is True:
                 print(f"Token: {token.text}")
                 print(" | ".join(list(CATEGORIES.keys())))
-                printable = [str(l).ljust(len(cname)) for l, cname in zip(labels, CATEGORIES.keys())]
+                printable = [
+                    str(l).ljust(len(cname))
+                    for l, cname in zip(labels, CATEGORIES.keys())
+                ]
                 printable = " | ".join(printable)
                 print(printable)
                 print("---")
         # add current sentence's tokens' labels to the list
         labelled_sentences.append(labelled_tokens)
-        
+
         if verbose is True:
             print("\n")
 
@@ -91,6 +95,7 @@ def label_tokens(sentences: List, verbose: bool = False) -> List[List]:
 
 if __name__ == "__main__":
     result = label_tokens(
-        ["Hi, my name is Quan. This is a great example, Peter.".split(" ")], verbose=True
+        ["Hi, my name is Quan. This is a great example, Peter.".split(" ")],
+        verbose=True,
     )
     print(result)
