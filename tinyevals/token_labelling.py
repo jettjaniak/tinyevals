@@ -27,6 +27,7 @@ CATEGORIES = {
     "Named Entity Type": (
         lambda token: token.ent_type_ if token.ent_type_ != "" else token.ent_type_
     ),  # False, 'PERSON', 'ORG', 'GPE', ..
+    "Dependency": (lambda token: token.dep_),  # 'nsubj', 'ROOT', 'dobj', ..
 }
 
 
@@ -90,12 +91,12 @@ def label_tokens(sentences: List, verbose: bool = False) -> List[List]:
         if verbose is True:
             print("\n")
 
-        return labelled_sentences
+    return labelled_sentences
 
 
 if __name__ == "__main__":
     result = label_tokens(
-        ["Hi, my name is Quan. This is a great example, Peter.".split(" ")],
+        ["Hi, my name is Joshua.".split(" "), "This is a great Bank of China, Peter.".split(" ")],
         verbose=True,
     )
     print(result)
