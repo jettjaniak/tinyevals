@@ -11,6 +11,12 @@ from spacy.tokens import Doc
 from spacy import displacy
 
 
+# make sure the english language model capabilities are installed by the equivalent of:
+# python -m spacy download en_core_web_sm
+# Should be run once, initially. Download only starts if not already installed.
+spacy.cli.download("en_core_web_sm", False, False, '-q')
+
+
 CATEGORIES = {
     "Starts with space": (lambda token: token.text.startswith(" ")),  # bool
     "Capitalized": (lambda token: token.text[0].isupper()),  # bool
@@ -19,17 +25,33 @@ CATEGORIES = {
     "Is Verb": (lambda token: "VB" in token.tag_),  # redundant
     "Is Adjective": (lambda token: token.pos_ == "ADJ"),  # redundant
     "Is Adverb": (lambda token: token.pos_ == "ADV"),  # redundant
+    "Named Entity Type": (lambda token: token.ent_type_ if token.ent_type_ != '' else token.ent_type_),  # False, 'PERSON', 'ORG', 'GPE', ..
 }
 
 
-def label_tokens(sentences: List, verbose: bool = False) -> List:
-    assert isinstance(input, list)
-    # Load english
+def label_tokens(sentences: List, verbose: bool = False) -> List[List]:
+    """
+    Labels tokens in a sentence. Takes the context of the token into account.
+
+    Parameters
+    ----------
+    sentences : List
+        A batch/list of sentences, each being a list of tokens.
+    verbose : bool, optional
+        Whether to print the tokens and their labels to the console, by default False.  
+
+    Returns
+    -------
+    List[List]
+        Returns a list of sentences. Each sentence contains a list of its 
+        corresponding token length where each entry provides the labels/categories 
+        for the token. Sentence -> Token -> Labels
+    """
+    assert isinstance(sentences, list)
+    # Load english language model
     nlp = spacy.load("en_core_web_sm")
-    # labelled tokens
-    labelled_sentences = (
-        list()
-    )  # List holding sentences which hold tokens which hold corresponding token labels
+    # labelled tokens, List holding sentences which hold tokens which hold corresponding token labels
+    labelled_sentences = list()
 
     for sentence in sentences:
         # Create a Doc from the list of tokens
@@ -44,43 +66,31 @@ def label_tokens(sentences: List, verbose: bool = False) -> List:
 
         for token in doc:
             labels = list()  #  The list holding labels of a single token
-            for category_check in CATEGORIES.values():
+            for cname, category_check in CATEGORIES.items():
                 label = category_check(token)
                 labels.append(label)
-                print(label, end="\t")
-            print()
+            # add current token's to the list
             labelled_tokens.append(labels)
-
+            
+            # print the token and its labels to console
             if verbose is True:
                 print(f"Token: {token.text}")
-                print(
-                    f"Starts with Space: {'Yes' if token.text.startswith(' ') else 'No'}"
-                )
-                print(f"Capitalized: {'Yes' if token.text[0].isupper() else 'No'}")
-                print(f"POS Tag: {token.pos_}")
-                print(f"Is Noun: {'Yes' if token.pos_ == 'NOUN' else 'No'}")
-                print(
-                    f"Is Singular: {'Yes' if token.tag_ == 'NN' else 'No'}, {token.tag_}"
-                )
-                print(f"Is Plural: {'Yes' if token.tag_ == 'NNS' else 'No'}")
-                print(f"Is Verb: {'Yes' if 'VB' in token.tag_ else 'No'}")
-                print(f"Is Adjective: {'Yes' if token.pos_ == 'ADJ' else 'No'}")
-                print(f"Is Adverb: {'Yes' if token.pos_ == 'ADV' else 'No'}")
-                # print(f"Is Part of a Word: {'Yes' if not token.is_alpha else 'No'}")
-                # Named Entity Recognition
-                if token.ent_type_:
-                    print(f"Named Entity Type: {token.ent_type_}")
+                print(" | ".join(list(CATEGORIES.keys())))
+                printable = [str(l).ljust(len(cname)) for l, cname in zip(labels, CATEGORIES.keys())]
+                printable = " | ".join(printable)
+                print(printable)
                 print("---")
-
-            # Additional checks for subjects or other complex categories can be added here
-
+        # add current sentence's tokens' labels to the list
         labelled_sentences.append(labelled_tokens)
-        print("\n")
+        
+        if verbose is True:
+            print("\n")
 
         return labelled_sentences
 
 
 if __name__ == "__main__":
-    label_tokens(
-        ["Hi, my name is Quan. This is a great example.".split(" ")], verbose=True
+    result = label_tokens(
+        ["Hi, my name is Quan. This is a great example, Peter.".split(" ")], verbose=True
     )
+    print(result)
