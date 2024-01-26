@@ -1,4 +1,3 @@
-import numpy as np
 from datasets import load_dataset
 from tqdm.auto import tqdm
 
@@ -12,10 +11,15 @@ def load_clean_dataset(split: str, tokenized: bool = False) -> list[str]:
     return dataset
 
 def token_map(tokenized_dataset: list[list[int]]) -> dict[int, list[tuple[int, int]]]:
-    unique_tokens = np.unique(tokenized_dataset)
     mapping = {}
-    for token in tqdm(unique_tokens):
-        indices = np.where(tokenized_dataset == token)
-        mapping[token] = list(zip(*indices))
+
+    for prompt_idx, prompt in enumerate(tokenized_dataset):
+        for token_idx, token in enumerate(prompt):
+            mapping.setdefault(token, []).append((prompt_idx, token_idx))
 
     return mapping
+
+if __name__ == "__main__":
+    tk = load_clean_dataset("train[:10]", True)
+    mapping = token_map(tk)
+    print(mapping)
