@@ -9,3 +9,12 @@ def load_clean_dataset(split: str, tokenized: bool = False) -> list[str]:
     for sample in tqdm(hf_ds["tokens" if tokenized else "story"]):
         dataset.append(sample)
     return dataset
+
+def token_map(tokenized_dataset: list[list[int]]) -> dict[int, list[tuple[int, int]]]:
+    mapping = {}
+
+    for prompt_idx, prompt in enumerate(tokenized_dataset):
+        for token_idx, token in enumerate(prompt):
+            mapping.setdefault(token, []).append((prompt_idx, token_idx))
+
+    return mapping
