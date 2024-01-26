@@ -18,8 +18,3 @@ def token_map(tokenized_dataset: list[list[int]]) -> dict[int, list[tuple[int, i
             mapping.setdefault(token, []).append((prompt_idx, token_idx))
 
     return mapping
-
-if __name__ == "__main__":
-    tk = load_clean_dataset("train[:10]", True)
-    mapping = token_map(tk)
-    print(mapping)
