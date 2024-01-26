@@ -11,7 +11,7 @@ def load_clean_dataset(split: str, tokenized: bool = False) -> list[str]:
         dataset.append(sample)
     return dataset
 
-def token_map(tokenized_dataset: list[str]) -> dict[int, list[tuple[int, int]]]:
+def token_map(tokenized_dataset: list[list[int]]) -> dict[int, list[tuple[int, int]]]:
     unique_tokens = np.unique(tokenized_dataset)
     mapping = {}
     for token in tqdm(unique_tokens):
